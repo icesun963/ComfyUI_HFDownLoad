@@ -6,7 +6,7 @@ import os
 dir_path = os.path.dirname(os.path.abspath(__file__))
 
 
-class Pipeline_Tool:
+class HFDownLoad_Tool:
     def __init__(self):
         pass
 
@@ -20,17 +20,21 @@ class Pipeline_Tool:
                                      "pth", "safetensors,bin,pth", "model", "msgpack", "onnx_data", "onnx", ],),
                 "max_workers": ("INT", {"default": 4, "min": 1, "max": 8, "step": 1, "display": "slider"}),
                 "download_single_file": ("STRING", {"default": ""}),
-                "use_default_cache_dir": ("BOOLEAN", {"default": False},)
+                "use_default_cache_dir": ("BOOLEAN", {"default": False},),
+                "use_hfmirror": ("BOOLEAN", {"default": False},),
+                "use_subdir": ("BOOLEAN", {"default": False},),
+                
+                
             }
         }
 
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("model_path",)
     FUNCTION = "pipeline_tool"
-    CATEGORY = "Pipeline_Tool"
+    CATEGORY = "HFDownLoad_Tool"
 
     def pipeline_tool(self, repo_id, local_dir,
-                      ignore_patterns, max_workers, download_single_file, use_default_cache_dir):
+                      ignore_patterns, max_workers, download_single_file, use_default_cache_dir,use_hfmirror,use_subdir):
         if use_default_cache_dir == True:
             cache_dir = None
             local_dir = None
@@ -41,9 +45,18 @@ class Pipeline_Tool:
             path = os.path.dirname(path_dir)
             repo_list = repo_id.split('/')
             dir_list = local_dir.split('/')
-            path = os.path.join(path, f"{dir_list[0]}", f"{dir_list[1]}", f"{repo_list[0]}", f"{repo_list[1]}")
+            if use_subdir ==True:
+                path = os.path.join(path, f"{dir_list[0]}", f"{dir_list[1]}", f"{repo_list[0]}", f"{repo_list[1]}")
+            else:
+                if len(dir_list)==2:
+                    path = os.path.join(path,  f"{dir_list[0]}", f"{dir_list[1]}")
+                else:
+                    path = local_dir
+
             cache_dir = os.path.join(path, "cache")
+            
             local_dir = os.path.normpath(path)
+            print(local_dir)
 
         if ignore_patterns == "none":
             ignore_patterns = None
@@ -70,8 +83,12 @@ class Pipeline_Tool:
             ignore_patterns = ["*.onnx"]
 
         s = len(download_single_file)
-        if s > 0:
+        if use_hfmirror ==True:
             os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
+        else:
+            os.environ['HF_ENDPOINT'] = ''
+        
+        if s > 0:
             from huggingface_hub import hf_hub_download
             model_path = hf_hub_download(repo_id=repo_id, filename=download_single_file, cache_dir=cache_dir,
                                          local_dir=local_dir,
@@ -79,7 +96,6 @@ class Pipeline_Tool:
                                          )
             return (model_path,)
         else:
-            os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
             from huggingface_hub import snapshot_download
             model_path = snapshot_download(repo_id=repo_id, cache_dir=cache_dir, local_dir=local_dir,
                                            local_dir_use_symlinks=local_dir_use_symlinks,
@@ -90,9 +106,9 @@ class Pipeline_Tool:
 
 
 NODE_CLASS_MAPPINGS = {
-    "Pipeline_Tool": Pipeline_Tool
+    "HFDownLoad_Tool": HFDownLoad_Tool
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "Pipeline_Tool": "Pipeline_Tool"
+    "HFDownLoad_Tool": "HFDownLoad_Tool"
 }
