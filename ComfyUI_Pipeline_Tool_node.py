@@ -23,6 +23,8 @@ class HFDownLoad_Tool:
                 "use_default_cache_dir": ("BOOLEAN", {"default": False},),
                 "use_hfmirror": ("BOOLEAN", {"default": False},),
                 "use_subdir": ("BOOLEAN", {"default": False},),
+                "use_localproxy": ("BOOLEAN", {"default": False},),
+                "localproxy": ("STRING", {"default": "http://127.0.0.1:1081"},),
                 
                 
             }
@@ -34,7 +36,7 @@ class HFDownLoad_Tool:
     CATEGORY = "HFDownLoad_Tool"
 
     def pipeline_tool(self, repo_id, local_dir,
-                      ignore_patterns, max_workers, download_single_file, use_default_cache_dir,use_hfmirror,use_subdir):
+                      ignore_patterns, max_workers, download_single_file, use_default_cache_dir,use_hfmirror,use_subdir,use_localproxy,localproxy):
         if use_default_cache_dir == True:
             cache_dir = None
             local_dir = None
@@ -87,7 +89,10 @@ class HFDownLoad_Tool:
             os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
         else:
             os.environ['HF_ENDPOINT'] = ''
-        
+        if use_localproxy == True:
+            os.environ['http_proxy'] = localproxy
+            os.environ['https_proxy'] = localproxy
+            print("set proxy")
         if s > 0:
             from huggingface_hub import hf_hub_download
             model_path = hf_hub_download(repo_id=repo_id, filename=download_single_file, cache_dir=cache_dir,
